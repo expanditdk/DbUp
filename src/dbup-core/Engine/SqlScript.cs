@@ -99,11 +99,45 @@ namespace DbUp.Engine
                 .Replace(Path.DirectorySeparatorChar, '.')
                 .Replace(Path.AltDirectorySeparatorChar, '.')
                 .Trim('.');
-
+            var encodingRead = GetFileEncoding(path);
+            
             using (var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read))
             {
-                return FromStream(filename, fileStream, encoding, sqlScriptOptions);
+            
+                    var t = FromStream(filename, fileStream, encodingRead, sqlScriptOptions);
+                    //Console.WriteLine("cont: " + t.Contents);
+                    return t;
+
+
             }
+        }
+
+        public static Encoding GetFileEncoding(string srcFile)
+
+        {
+
+            // *** Use Default of Encoding.Default (Ansi CodePage)
+
+            Encoding enc = Encoding.GetEncoding(1252);
+
+            try
+            {
+                var ae = Encoding.GetEncoding(
+                 "utf-8",
+                 new EncoderExceptionFallback(),
+                 new DecoderExceptionFallback());
+
+                var bytes = File.ReadAllBytes(srcFile);
+                var test = ae.GetString(bytes);
+                enc = Encoding.UTF8;
+            }
+            catch (DecoderFallbackException)
+            {
+                //Console.WriteLine(srcFile + " FAiled UTF8");
+            }
+            //Console.WriteLine(srcFile + " - " + enc);
+            return enc;
+
         }
 
         /// <summary>

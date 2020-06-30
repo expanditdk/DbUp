@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data.SqlClient;
 using DbUp.Engine;
+using DbUp.Helpers;
 using NDesk.Options;
 
 namespace DbUp.Console
@@ -15,6 +16,7 @@ namespace DbUp.Console
             var username = "";
             var password = "";
             bool mark = false;
+            bool nullJournal = false;
             int executionTimeout = 30;
             var connectionString = "";
 
@@ -32,6 +34,7 @@ namespace DbUp.Console
                 { "h|help",  "show this message and exit", v => show_help = v != null },
                 {"mark", "Mark scripts as executed but take no action", m => mark = true},
                 {"et|executionTimeout=", "Execution Timeout (sec) | defaults to 30", et => executionTimeout = int.Parse(et)},
+                {"nj|nullJournal=", "Run with null journal | defaults to standard", nj => nullJournal = true},
             };
 
             optionSet.Parse(args);
@@ -52,12 +55,20 @@ namespace DbUp.Console
                 connectionString = BuildConnectionString(server, database, username, password);
             }
 
-            var dbup = DeployChanges.To
+            var tempBuilder = DeployChanges.To
                 .SqlDatabase(connectionString)
                 .LogToConsole()
+
+
                 .WithExecutionTimeout(TimeSpan.FromSeconds(executionTimeout))
-                .WithScriptsFromFileSystem(directory)
-                .Build();
+                .WithScriptsFromFileSystem(directory);
+
+            var dbup = tempBuilder.Build();
+            if (nullJournal)
+            {
+                dbup = tempBuilder.JournalTo(new NullJournal())
+                            .Build();
+            }
 
             DatabaseUpgradeResult result = null;
             if (!mark)
